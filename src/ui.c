@@ -227,7 +227,7 @@ I32 __color_user_name_message(ChatState* state, I32 i, I32 y_pos, I32 w) {
             if (lines_used == 0) {
                 snprintf(buffer, chunk_len + 3, ": %.*s", chunk_len, state->messages[i].content + offset);
             } else {
-                snprintf(buffer, chunk_len + 2, " %.*s", chunk_len, state->messages[i].content + offset);
+                snprintf(buffer, chunk_len + 3, "  %.*s", chunk_len, state->messages[i].content + offset);
             }
             
             _drawString(USERNAME_WIDTH + 2 + strlen(state->messages[i].username), y_pos + lines_used, buffer, TB_WHITE, TB_DEFAULT);

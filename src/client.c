@@ -28,7 +28,7 @@ I32 clientConnect(const I8* ip, U16 port) {
 
     if (pthread_create(&thread, NULL, clientRead, NULL)) {
         printf("Network thread creation failed\n");
-        return 1;
+        return 0;
     }
 
     return 1;

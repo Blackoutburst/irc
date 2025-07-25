@@ -7,7 +7,7 @@ ChatState* chatGetState(void) {
 }
 
 void chatInit(void) {
-    state = malloc(sizeof(state));
+    state = malloc(sizeof(ChatState));
 
     state->input_len = 0;
     state->message_count = 0;

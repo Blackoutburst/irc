@@ -61,7 +61,7 @@ void _drawString(I32 x, I32 y, const I8* str, I32 fg, I32 bg) {
 }
 
 void _uiDrawHeader(ChatState* state, I32 w, I32 h) {
-    _drawBox(0, 0, w - 1, HEADER_HEIGHT, TB_WHITE, TB_DEFAULT);
+    _drawBox(0, 0, w, HEADER_HEIGHT, TB_WHITE, TB_DEFAULT);
 
     _drawString(2, 2, state->current_channel, TB_CYAN, TB_DEFAULT);
     _drawString(USERNAME_WIDTH + 2, 2, state->server_name, TB_GREEN, TB_DEFAULT);
@@ -69,19 +69,42 @@ void _uiDrawHeader(ChatState* state, I32 w, I32 h) {
 }
 
 void _uiDrawChat(ChatState* state, I32 w, I32 h) {
-    _drawBox(USERNAME_WIDTH - 1, 0, w - USERNAME_WIDTH, h - INPUT_HEIGHT + 1, TB_WHITE, TB_DEFAULT);
+    _drawBox(USERNAME_WIDTH - 1, 0, w - USERNAME_WIDTH + 1, h - INPUT_HEIGHT + 1, TB_WHITE, TB_DEFAULT);
     
     I32 msg_area_h = h - INPUT_HEIGHT - HEADER_HEIGHT;
-    I32 start_msg = state->message_count > msg_area_h ? state->message_count - msg_area_h : 0;
-    for (I32 i = start_msg; i < state->message_count && i - start_msg < msg_area_h; i++) {
-        __color_user_name_message(state, i, start_msg);
-        //snprintf(buffer, MAX_MESSAGE_LEN, "%s: %s", state->messages[i].username, state->messages[i].content);
-        //_drawString(USERNAME_WIDTH + 2, i - start_msg + HEADER_HEIGHT, buffer, TB_WHITE, TB_DEFAULT);
+    
+    I32 total_lines = 0;
+    I32* message_lines = malloc(state->message_count * sizeof(I32));
+    
+    for (I32 i = 0; i < state->message_count; i++) {
+        message_lines[i] = _calculateMessageLines(state, i, w);
+        total_lines += message_lines[i];
     }
+    
+    I32 start_msg = 0;
+    
+    if (total_lines > msg_area_h) {
+        I32 lines_from_end = 0;
+        for (I32 i = state->message_count - 1; i >= 0; i--) {
+            if (lines_from_end + message_lines[i] > msg_area_h) {
+                start_msg = i + 1;
+                break;
+            }
+            lines_from_end += message_lines[i];
+        }
+    }
+    
+    I32 current_y = HEADER_HEIGHT;
+    for (I32 i = start_msg; i < state->message_count && current_y < h - INPUT_HEIGHT; i++) {
+        I32 lines_drawn = __color_user_name_message(state, i, current_y, w);
+        current_y += lines_drawn;
+    }
+    
+    free(message_lines);
 }
 
 void _uiDrawInput(ChatState* state, I32 w, I32 h) {
-    _drawBox(USERNAME_WIDTH - 1, h - INPUT_HEIGHT, w - USERNAME_WIDTH, INPUT_HEIGHT, TB_WHITE, TB_DEFAULT);
+    _drawBox(USERNAME_WIDTH - 1, h - INPUT_HEIGHT, w - USERNAME_WIDTH + 1, INPUT_HEIGHT, TB_WHITE, TB_DEFAULT);
     
     _drawString(USERNAME_WIDTH + 2, h - INPUT_HEIGHT + 2, "> ", TB_WHITE, TB_DEFAULT);
     _drawString(USERNAME_WIDTH + 4, h - INPUT_HEIGHT + 2, state->input, TB_WHITE, TB_DEFAULT);
@@ -92,7 +115,6 @@ void _uiDrawUsers(ChatState* state, I32 w, I32 h) {
     
     for (I32 i = 0; i < state->user_count && i < h - INPUT_HEIGHT - 2; i++) {
         __color_user_name(state, i);
-        //_drawString(2, HEADER_HEIGHT + i + 1, state->users[i], TB_WHITE, TB_DEFAULT);
     }
 }
 
@@ -100,10 +122,10 @@ void _uiDrawJoint(I32 w, I32 h) {
     tb_set_cell(USERNAME_WIDTH - 1, 0, BOX_VERTICAL_SPLIT_TOP, TB_WHITE, TB_DEFAULT);
     tb_set_cell(USERNAME_WIDTH - 1, h - 1, BOX_VERTICAL_SPLIT_BOTTOM, TB_WHITE, TB_DEFAULT);
     tb_set_cell(USERNAME_WIDTH - 1, h - INPUT_HEIGHT, BOX_HORIZONTAL_SPLIT_LEFT, TB_WHITE, TB_DEFAULT);
-    tb_set_cell(w - 2, h - INPUT_HEIGHT, BOX_HORIZONTAL_SPLIT_RIGHT, TB_WHITE, TB_DEFAULT);
+    tb_set_cell(w - 1, h - INPUT_HEIGHT, BOX_HORIZONTAL_SPLIT_RIGHT, TB_WHITE, TB_DEFAULT);
     tb_set_cell(USERNAME_WIDTH - 1, HEADER_HEIGHT - 1, BOX_MIDDLE, TB_WHITE, TB_DEFAULT);
     tb_set_cell(0, HEADER_HEIGHT - 1, BOX_HORIZONTAL_SPLIT_LEFT, TB_WHITE, TB_DEFAULT);
-    tb_set_cell(w-2, HEADER_HEIGHT - 1, BOX_HORIZONTAL_SPLIT_RIGHT, TB_WHITE, TB_DEFAULT);
+    tb_set_cell(w - 1, HEADER_HEIGHT - 1, BOX_HORIZONTAL_SPLIT_RIGHT, TB_WHITE, TB_DEFAULT);
 }
 
 void _uiInput(ChatState* state, struct tb_event *ev) {
@@ -131,6 +153,23 @@ void _uiInput(ChatState* state, struct tb_event *ev) {
     }
 }
 
+I32 _calculateMessageLines(ChatState* state, I32 msg_index, I32 w) {
+    if (!strncmp(state->messages[msg_index].username, ">>>", strlen(">>>")) || 
+        !strncmp(state->messages[msg_index].username, "<<<", strlen("<<<"))) {
+        I32 total_len = strlen(state->messages[msg_index].username) + 1 + strlen(state->messages[msg_index].content);
+        I32 available_width = w - USERNAME_WIDTH - 4;
+        return (total_len + available_width - 1) / available_width;
+    } else {
+        I32 content_width = w - USERNAME_WIDTH - 5 - strlen(state->messages[msg_index].username);
+        if (content_width <= 0) content_width = 1;
+        
+        I32 content_len = strlen(state->messages[msg_index].content);
+        if (content_len == 0) return 1;
+        
+        return (content_len + content_width - 1) / content_width;
+    }
+}
+
 // |!| ASS SECTION |!|
 
 I32 __color_by_name(ChatState* state, const I8* username) {
@@ -153,18 +192,55 @@ void __color_user_name(ChatState* state, I32 i) {
     _drawString(2, HEADER_HEIGHT + i, state->users[i], color, TB_DEFAULT);
 }
 
-void __color_user_name_message(ChatState* state, I32 i, I32 start_msg) {
-    I8 buffer[MAX_MESSAGE_LEN];
-    
+I32 __color_user_name_message(ChatState* state, I32 i, I32 y_pos, I32 w) {
+    I8 buffer[MAX_MESSAGE_LEN + 5];
     I32 color = __color_by_name(state, state->messages[i].username);
+    I32 lines_used = 0;
 
-    if (!strncmp(state->messages[i].username, ">>>", strlen(">>>")) || !strncmp(state->messages[i].username, "<<<", strlen("<<<"))) {
+    if (!strncmp(state->messages[i].username, ">>>", strlen(">>>")) || 
+        !strncmp(state->messages[i].username, "<<<", strlen("<<<"))) {
         snprintf(buffer, MAX_MESSAGE_LEN, "%s %s", state->messages[i].username, state->messages[i].content);
-        _drawString(USERNAME_WIDTH + 2, i - start_msg + HEADER_HEIGHT, buffer, color, TB_DEFAULT);
-    } else {
-        _drawString(USERNAME_WIDTH + 2, i - start_msg + HEADER_HEIGHT, state->messages[i].username, color, TB_DEFAULT);
         
-        snprintf(buffer, MAX_MESSAGE_LEN, ": %s", state->messages[i].content);
-        _drawString(USERNAME_WIDTH + 2 + strlen(state->messages[i].username), i - start_msg + HEADER_HEIGHT, buffer, TB_WHITE, TB_DEFAULT);
+        I32 available_width = w - USERNAME_WIDTH - 4;
+        I32 total_len = strlen(buffer);
+        I32 offset = 0;
+        
+        while (offset < total_len) {
+            I32 chunk_len = (total_len - offset > available_width) ? available_width : total_len - offset;
+            snprintf(buffer, chunk_len + 1, "%s", buffer + offset);
+            _drawString(USERNAME_WIDTH + 2, y_pos + lines_used, buffer, color, TB_DEFAULT);
+            offset += chunk_len;
+            lines_used++;
+        }
+    } else {
+        _drawString(USERNAME_WIDTH + 2, y_pos, state->messages[i].username, color, TB_DEFAULT);
+        
+        I32 content_width = w - USERNAME_WIDTH - 5 - strlen(state->messages[i].username);
+        if (content_width <= 0) content_width = 1;
+        
+        I32 content_len = strlen(state->messages[i].content);
+        I32 offset = 0;
+        
+        while (offset < content_len) {
+            I32 chunk_len = (content_len - offset > content_width) ? content_width : content_len - offset;
+            
+            if (lines_used == 0) {
+                snprintf(buffer, chunk_len + 3, ": %.*s", chunk_len, state->messages[i].content + offset);
+            } else {
+                snprintf(buffer, chunk_len + 2, " %.*s", chunk_len, state->messages[i].content + offset);
+            }
+            
+            _drawString(USERNAME_WIDTH + 2 + strlen(state->messages[i].username), y_pos + lines_used, buffer, TB_WHITE, TB_DEFAULT);
+            offset += chunk_len;
+            lines_used++;
+        }
+        
+        if (content_len == 0) {
+            _drawString(USERNAME_WIDTH + 2 + strlen(state->messages[i].username), y_pos, ":", TB_WHITE, TB_DEFAULT);
+            lines_used = 1;
+        }
     }
+
+    return lines_used;
 }
+

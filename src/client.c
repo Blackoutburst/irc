@@ -44,7 +44,7 @@ void* clientRead(void* arg) {
         
         while (1) {
             bytes_received += recv(sockfd, byte, 1, 0);
-            if (bytes_received <= 0) {
+            if (bytes_received <= 0 || bytes_received > BUFFER_SIZE) {
                 if (bytes_received == 0) {
                     printf("Server closed connection\n");
                 } else {

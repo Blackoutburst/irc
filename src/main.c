@@ -6,7 +6,7 @@
 #include "chat.h"
 
 int main(int argc, char** argv) {
-    if (argc < 5) {
+    if (argc != 5) {
         printf("Error use ./irc <ip> <port> <nick> <real>\n");
         return 1;
     }
@@ -24,10 +24,9 @@ int main(int argc, char** argv) {
     IRC_NICK(argv[3]);
     IRC_USER(argv[4]);
     
-    I32 sockfd = clientGetfd();
     pthread_t thread = clientGetThread();
 
-    while (sockfd != -1) {
+    while (clientGetfd() != -1) {
         uiUpdate(0);
     }
 

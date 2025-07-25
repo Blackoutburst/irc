@@ -102,6 +102,8 @@ void _uiDrawJoint(I32 w, I32 h) {
     tb_set_cell(USERNAME_WIDTH - 1, h - INPUT_HEIGHT, BOX_HORIZONTAL_SPLIT_LEFT, TB_WHITE, TB_DEFAULT);
     tb_set_cell(w - 2, h - INPUT_HEIGHT, BOX_HORIZONTAL_SPLIT_RIGHT, TB_WHITE, TB_DEFAULT);
     tb_set_cell(USERNAME_WIDTH - 1, HEADER_HEIGHT - 1, BOX_MIDDLE, TB_WHITE, TB_DEFAULT);
+    tb_set_cell(0, HEADER_HEIGHT - 1, BOX_HORIZONTAL_SPLIT_LEFT, TB_WHITE, TB_DEFAULT);
+    tb_set_cell(w-2, HEADER_HEIGHT - 1, BOX_HORIZONTAL_SPLIT_RIGHT, TB_WHITE, TB_DEFAULT);
 }
 
 void _uiInput(ChatState* state, struct tb_event *ev) {

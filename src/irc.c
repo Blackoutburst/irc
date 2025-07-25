@@ -13,12 +13,6 @@ I32 ircRunCommand(ChatState* state, const I8* command) {
         return 1;
     }
     
-    if (!strncmp(command, "!part", 5)) { 
-        IRC_PART(state->current_channel); 
-        stringClear(state->current_channel);
-        return 1;
-    }
-
     return 0;
 }
 

@@ -21,4 +21,3 @@ void ircProcessMessage(const I8* message);
 I8* ircGetUsername(const I8* message);
 
 void _ircSendPacket(const I8* format, ...);
-

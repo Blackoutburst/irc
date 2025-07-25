@@ -1,4 +1,5 @@
 #include "client.h"
+#include "ui.h"
 
 static I32 sockfd = -1;
 static pthread_t thread;
@@ -57,6 +58,7 @@ void* clientRead(void* arg) {
             if (bytes_received > 1 && recv_buffer[bytes_received - 2] == '\r' && recv_buffer[bytes_received - 1] == '\n') {
                 recv_buffer[bytes_received - 2] = '\0';
                 ircProcessMessage(recv_buffer);
+                uiUpdate(1);
                 break;
             }
         }

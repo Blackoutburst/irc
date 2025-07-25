@@ -20,12 +20,15 @@ int main(int argc, char** argv) {
     if (!uiInit()) return 1;
 
     if (!clientConnect(argv[1], atoi(argv[2]))) return 1; 
+
+    IRC_NICK(argv[3]);
+    IRC_USER(argv[4]);
     
     I32 sockfd = clientGetfd();
     pthread_t thread = clientGetThread();
 
     while (sockfd != -1) {
-        uiUpdate();
+        uiUpdate(0);
     }
 
     pthread_join(thread, NULL);

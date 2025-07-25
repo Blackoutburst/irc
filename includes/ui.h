@@ -21,7 +21,7 @@
 #define BOX_MIDDLE L'╬'
 
 I32 uiInit(void);
-void uiUpdate(void);
+void uiUpdate(U8 force);
 void uiClean(void);
 
 void _drawBox(I32 x, I32 y, I32 w, I32 h, I32 fg, I32 bg);

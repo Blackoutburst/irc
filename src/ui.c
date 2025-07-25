@@ -13,7 +13,7 @@ I32 uiInit(void) {
     return 1;
 }
 
-void uiUpdate(void) {
+void uiUpdate(U8 force) {
     ChatState* state = chatGetState();
     I32 w = tb_width();
     I32 h = tb_height();
@@ -28,7 +28,7 @@ void uiUpdate(void) {
 
     tb_present();
 
-    tb_poll_event(&ev);
+    if (!force) tb_poll_event(&ev);
     
     _uiInput(state, &ev);
 }
@@ -77,7 +77,7 @@ void _uiDrawChat(ChatState* state, I32 w, I32 h) {
         I8 buffer[MAX_MESSAGE_LEN];
 
         snprintf(buffer, MAX_MESSAGE_LEN, "%s: %s", state->messages[i].username, state->messages[i].content);
-        _drawString(USERNAME_WIDTH + 2 + strlen(state->messages[i].username), i - start_msg + HEADER_HEIGHT, buffer, TB_WHITE, TB_DEFAULT);
+        _drawString(USERNAME_WIDTH + 2, i - start_msg + HEADER_HEIGHT, buffer, TB_WHITE, TB_DEFAULT);
     }
 }
 

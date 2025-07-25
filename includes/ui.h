@@ -32,3 +32,7 @@ void _uiDrawUsers(ChatState* state, I32 w, I32 h);
 void _uiDrawInput(ChatState* state, I32 w, I32 h);
 void _uiDrawJoint(I32 w, I32 h);
 void _uiInput(ChatState* state, struct tb_event *ev);
+
+I32 __color_by_name(ChatState* state, const I8* username);
+void __color_user_name(ChatState* state, I32 i);
+void __color_user_name_message(ChatState* state, I32 i, I32 start_msg);

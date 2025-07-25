@@ -74,10 +74,9 @@ void _uiDrawChat(ChatState* state, I32 w, I32 h) {
     I32 msg_area_h = h - INPUT_HEIGHT - HEADER_HEIGHT;
     I32 start_msg = state->message_count > msg_area_h ? state->message_count - msg_area_h : 0;
     for (I32 i = start_msg; i < state->message_count && i - start_msg < msg_area_h; i++) {
-        I8 buffer[MAX_MESSAGE_LEN];
-
-        snprintf(buffer, MAX_MESSAGE_LEN, "%s: %s", state->messages[i].username, state->messages[i].content);
-        _drawString(USERNAME_WIDTH + 2, i - start_msg + HEADER_HEIGHT, buffer, TB_WHITE, TB_DEFAULT);
+        __color_user_name_message(state, i, start_msg);
+        //snprintf(buffer, MAX_MESSAGE_LEN, "%s: %s", state->messages[i].username, state->messages[i].content);
+        //_drawString(USERNAME_WIDTH + 2, i - start_msg + HEADER_HEIGHT, buffer, TB_WHITE, TB_DEFAULT);
     }
 }
 
@@ -92,7 +91,8 @@ void _uiDrawUsers(ChatState* state, I32 w, I32 h) {
     _drawBox(0, 0, USERNAME_WIDTH, h, TB_WHITE, TB_DEFAULT);
     
     for (I32 i = 0; i < state->user_count && i < h - INPUT_HEIGHT - 2; i++) {
-        _drawString(2, HEADER_HEIGHT + i + 1, state->users[i], TB_WHITE, TB_DEFAULT);
+        __color_user_name(state, i);
+        //_drawString(2, HEADER_HEIGHT + i + 1, state->users[i], TB_WHITE, TB_DEFAULT);
     }
 }
 
@@ -126,5 +126,43 @@ void _uiInput(ChatState* state, struct tb_event *ev) {
             state->input[state->input_len++] = ev->ch;
             state->input[state->input_len] = '\0';
         }
+    }
+}
+
+// |!| ASS SECTION |!|
+
+I32 __color_by_name(ChatState* state, const I8* username) {
+    I32 color = TB_WHITE;
+
+    if (!strncmp(username, "IRC", 3) || !strncmp(username, state->server_name, strlen(state->server_name))) color = TB_YELLOW;
+    if (!strncmp(username, "Ichika", strlen("Ichika"))) color = TB_RED;
+    if (!strncmp(username, "shiroko", strlen("shiroko"))) color = TB_CYAN;
+    if (!strncmp(username, "user", strlen("user"))) color = TB_GREEN;
+    if (!strncmp(username, "Venice", strlen("Venice"))) color = TB_BLUE;
+
+    if (!strncmp(username, ">>>", strlen(">>>"))) color = TB_GREEN;
+    if (!strncmp(username, "<<<", strlen("<<<"))) color = TB_RED;
+
+    return color;
+}
+
+void __color_user_name(ChatState* state, I32 i) {
+    I32 color = __color_by_name(state, state->users[i]);
+    _drawString(2, HEADER_HEIGHT + i, state->users[i], color, TB_DEFAULT);
+}
+
+void __color_user_name_message(ChatState* state, I32 i, I32 start_msg) {
+    I8 buffer[MAX_MESSAGE_LEN];
+    
+    I32 color = __color_by_name(state, state->messages[i].username);
+
+    if (!strncmp(state->messages[i].username, ">>>", strlen(">>>")) || !strncmp(state->messages[i].username, "<<<", strlen("<<<"))) {
+        snprintf(buffer, MAX_MESSAGE_LEN, "%s %s", state->messages[i].username, state->messages[i].content);
+        _drawString(USERNAME_WIDTH + 2, i - start_msg + HEADER_HEIGHT, buffer, color, TB_DEFAULT);
+    } else {
+        _drawString(USERNAME_WIDTH + 2, i - start_msg + HEADER_HEIGHT, state->messages[i].username, color, TB_DEFAULT);
+        
+        snprintf(buffer, MAX_MESSAGE_LEN, ": %s", state->messages[i].content);
+        _drawString(USERNAME_WIDTH + 2 + strlen(state->messages[i].username), i - start_msg + HEADER_HEIGHT, buffer, TB_WHITE, TB_DEFAULT);
     }
 }

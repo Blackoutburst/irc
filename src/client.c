@@ -3,9 +3,22 @@
 
 static I32 sockfd = -1;
 static pthread_t thread;
+static SSL_CTX* ctx = NULL;
+static SSL* ssl = NULL;
 
 I32 clientConnect(const I8* ip, U16 port) {
     struct sockaddr_in server_addr;
+
+    if (ctx == NULL) {
+        _initOpenssl();
+        ctx = SSL_CTX_new(TLS_client_method());
+        
+        if (ctx == NULL) {
+            printf("SSL context creation failed\n");
+            ERR_print_errors_fp(stderr);
+            return 0;
+        }
+    }
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
@@ -22,8 +35,25 @@ I32 clientConnect(const I8* ip, U16 port) {
         return 0;
     }
 
-    if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+    if (connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
         printf("Connection failed\n");
+        return 0;
+    }
+
+    ssl = SSL_new(ctx);
+    if (ssl == NULL) {
+        printf("SSL creation failed\n");
+        ERR_print_errors_fp(stderr);
+        return 0;
+    }
+    
+    SSL_set_fd(ssl, sockfd);
+
+    if (SSL_connect(ssl) <= 0) {
+        printf("SSL handshake failed\n");
+        ERR_print_errors_fp(stderr);
+        SSL_free(ssl);
+        close(sockfd);
         return 0;
     }
 
@@ -37,30 +67,40 @@ I32 clientConnect(const I8* ip, U16 port) {
 
 void* clientRead(void* arg) {
     I8 recv_buffer[BUFFER_SIZE];
+    I32 bytes_received = 0;
 
     while (1) {
-        I32 bytes_received = 0;
         I8 byte[1];
-        
-        while (1) {
-            bytes_received += recv(sockfd, byte, 1, 0);
-            if (bytes_received <= 0 || bytes_received > BUFFER_SIZE) {
-                if (bytes_received == 0) {
-                    printf("Server closed connection\n");
-                } else {
-                    perror("recv failed");
-                }
-                close(sockfd);
-                sockfd = -1;
-                break;
+        I32 ret = SSL_read(ssl, byte, 1);
+        if (ret <= 0) {
+            I32 err = SSL_get_error(ssl, ret);
+            
+            if (err == SSL_ERROR_ZERO_RETURN) {
+                printf("Server closed connection\n");
+            } else {
+                printf("SSL read failed\n");
+                ERR_print_errors_fp(stderr);
             }
-            recv_buffer[bytes_received - 1] = byte[0];
-            if (bytes_received > 1 && recv_buffer[bytes_received - 2] == '\r' && recv_buffer[bytes_received - 1] == '\n') {
-                recv_buffer[bytes_received - 2] = '\0';
-                ircProcessMessage(recv_buffer);
-                uiUpdate(1);
-                break;
-            }
+            SSL_shutdown(ssl);
+            SSL_free(ssl);
+            close(sockfd);
+            sockfd = -1;
+            break;
+        }
+
+        recv_buffer[bytes_received] = byte[0];
+        bytes_received += ret;
+
+        if (bytes_received > 1 && recv_buffer[bytes_received - 2] == '\r' && recv_buffer[bytes_received - 1] == '\n') {
+            recv_buffer[bytes_received - 2] = '\0';
+            ircProcessMessage(recv_buffer);
+            uiUpdate(1);
+            bytes_received = 0;
+        }
+
+        if (bytes_received >= BUFFER_SIZE) {
+            printf("Buffer overflow\n");
+            break;
         }
     }
 
@@ -68,13 +108,37 @@ void* clientRead(void* arg) {
 }
 
 void clientClose(void) {
-    close(sockfd);
+    if (ssl != NULL) {
+        SSL_shutdown(ssl);
+        SSL_free(ssl);
+        ssl = NULL;
+    }
+    
+    if (sockfd != -1) {
+        close(sockfd);
+        sockfd = -1;
+    }
+    
+    if (ctx != NULL) {
+        SSL_CTX_free(ctx);
+        ctx = NULL;
+    }
 }
 
 I32 clientGetfd(void) {
     return sockfd;
 }
 
+SSL* clientGetSsl(void) {
+    return ssl;
+}
+
 pthread_t clientGetThread(void) {
     return thread;
+}
+
+void _initOpenssl(void) {
+    SSL_library_init();
+    SSL_load_error_strings();
+    OpenSSL_add_all_algorithms();
 }

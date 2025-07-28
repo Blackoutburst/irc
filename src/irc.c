@@ -1,3 +1,6 @@
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+
 #include "irc.h"
 #include "chat.h"
 
@@ -159,7 +162,7 @@ I8* ircGetUsername(const I8* message) {
 }
 
 void _ircSendPacket(const I8* format, ...) {
-    I32 sockfd = clientGetfd();
+    SSL* ssl = clientGetSsl();
 
     va_list args;
     va_start(args, format);
@@ -193,7 +196,7 @@ void _ircSendPacket(const I8* format, ...) {
         return;
     }
 
-    if (send(sockfd, buffer, (I32)written, 0) < 0) {
+    if (SSL_write(ssl, buffer, (I32)written) < 0) {
         perror("send failed");
     }
 
